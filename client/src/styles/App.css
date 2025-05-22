@@ -9,7 +9,7 @@
   --warning: #f59e0b;
   --background: #f8fafc;
   --text: #0f172a;
-  --text-light: #64748b;
+  --text-light: #7f8c8d;
   --border: #e2e8f0;
 
   /* Spacing */
@@ -29,6 +29,14 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #e74c3c;
+  --background-color: #f5f6fa;
+  --text-color: #2c3e50;
+  --border-color: #ecf0f1;
+  --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Reset & Base Styles */
@@ -39,10 +47,11 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--background);
-  color: var(--text);
-  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f8f9fa;
+  color: var(--text-color);
+  line-height: 1.6;
 }
 
 /* Layout */
@@ -54,7 +63,7 @@ body {
 
 .main-content {
   flex: 1;
-  padding: var(--spacing-lg);
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -137,7 +146,7 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
   .main-content {
-    padding: var(--spacing-md);
+    padding: 1rem;
   }
 
   .grid {
@@ -157,15 +166,55 @@ body {
 
 /* Loading States */
 .loading {
-  display: inline-block;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 3px solid var(--border);
-  border-radius: 50%;
-  border-top-color: var(--primary);
-  animation: spin 1s linear infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 1.2rem;
+  color: var(--text-color);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.error-message {
+  color: var(--accent-color);
+  background-color: rgba(231, 76, 60, 0.1);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  color: #27ae60;
+  background-color: rgba(39, 174, 96, 0.1);
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+/* New styles from the code block */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+input, select, textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  width: 100%;
+  color: var(--text-color);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--secondary-color);
 } 

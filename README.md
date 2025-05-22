@@ -1,46 +1,107 @@
-# Getting Started with Create React App
+# Event Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern event management platform built with the MERN stack (MongoDB, Express.js, React.js, Node.js).
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- User authentication and authorization
+- Event creation and management
+- Event registration and ticketing
+- User profiles and roles (Admin, Organizer, User)
+- Event search and filtering
+- Responsive design
+- Custom styling without external UI libraries
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Frontend
+- React.js
+- React Router for navigation
+- Custom CSS with CSS variables
+- Responsive design
+- Modern UI/UX
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Backend
+- Node.js
+- Express.js
+- MongoDB with Mongoose
+- JWT for authentication
+- RESTful API
 
-### `npm test`
+## Getting Started
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB
+- npm or yarn
 
-### `npm run build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/event-management-system.git
+cd event-management-system
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Install dependencies:
+```bash
+# Install frontend dependencies
+cd client
+npm install
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+# Install backend dependencies
+cd ../server
+npm install
+```
 
-### `npm run eject`
+3. Create a `.env` file in the server directory:
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+4. Start the development servers:
+```bash
+# Start backend server (from server directory)
+npm run dev
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Start frontend server (from client directory)
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## API Endpoints
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Authentication
+- POST `/api/auth/register` - Register a new user
+- POST `/api/auth/login` - Login user
+- GET `/api/auth/me` - Get current user
+- PATCH `/api/auth/profile` - Update user profile
+- PATCH `/api/auth/change-password` - Change password
 
-## Learn More
+### Events
+- GET `/api/events` - Get all events
+- GET `/api/events/:id` - Get single event
+- POST `/api/events` - Create event (organizer only)
+- PATCH `/api/events/:id` - Update event (organizer only)
+- DELETE `/api/events/:id` - Delete event (organizer only)
+- POST `/api/events/:id/register` - Register for event
+- POST `/api/events/:id/cancel` - Cancel registration
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Users
+- GET `/api/users/:id` - Get user profile
+- GET `/api/users/:id/events` - Get user's organized events
+- GET `/api/users/:id/registrations` - Get user's registered events
+- PATCH `/api/users/:id/role` - Update user role (admin only)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

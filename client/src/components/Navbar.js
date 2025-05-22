@@ -1,55 +1,67 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import './Navbar.css';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
+import '../styles/Navbar.css';
 
 const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Replace with actual auth state
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    // Add logout logic here
-    setIsLoggedIn(false);
+    logout();
+    toast.success('👋 Successfully logged out!');
     navigate('/login');
+  };
+
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <Link to="/" className="navbar-logo">
-          EventHub
-        </Link>
+        <div className="navbar-logo">
+          <Link to="/">🎉 EventHub</Link>
+        </div>
 
-        <button className="menu-toggle" onClick={toggleMenu}>
-          <span className={`menu-icon ${isMenuOpen ? 'open' : ''}`}></span>
+        {/* Mobile menu button */}
+        <button className="menu-toggle" onClick={toggleMobileMenu}>
+          <span className={`menu-icon ${isMobileMenuOpen ? 'open' : ''}`}></span>
         </button>
 
-        <div className={`navbar-menu ${isMenuOpen ? 'active' : ''}`}>
-          <Link to="/events" className="nav-link">
-            Events
+        {/* Desktop navigation */}
+        <div className={`navbar-menu ${isMobileMenuOpen ? 'active' : ''}`}>
+          <Link to="/events" className={`nav-link ${isActive('/events') ? 'active' : ''}`}>
+            Browse Events
           </Link>
-          {isLoggedIn ? (
+
+          {user ? (
             <>
-              <Link to="/create-event" className="nav-link">
-                Create Event
-              </Link>
-              <Link to="/profile" className="nav-link">
+              {(user.role === 'organizer' || user.role === 'admin') && (
+                <Link to="/events/create" className="nav-link">
+                  + Create Event
+                </Link>
+              )}
+              <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'active' : ''}`}>
                 Profile
               </Link>
-              <button onClick={handleLogout} className="btn btn-secondary">
+              <button onClick={handleLogout} className="nav-link">
                 Logout
               </button>
             </>
           ) : (
             <div className="auth-buttons">
-              <Link to="/login" className="btn btn-secondary">
+              <Link to="/login" className="nav-link">
                 Login
               </Link>
-              <Link to="/register" className="btn btn-primary">
+              <Link to="/register" className="nav-link">
                 Sign Up
               </Link>
             </div>

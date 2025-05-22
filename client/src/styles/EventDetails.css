@@ -1,0 +1,155 @@
+.event-details-container {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.event-details-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.event-details-card .event-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-details-card .event-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.event-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+  background-color: #f8f9fa;
+}
+
+.event-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-info-item .label {
+  font-weight: 500;
+  color: var(--text-color);
+  font-size: 0.875rem;
+}
+
+.event-description,
+.event-organizer,
+.attendees-section {
+  padding: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.event-description h2,
+.event-organizer h2,
+.attendees-section h2 {
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+}
+
+.event-actions {
+  padding: 2rem;
+  display: flex;
+  gap: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.register-button,
+.cancel-button,
+.edit-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.register-button {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.register-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.register-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.cancel-button {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #c0392b;
+}
+
+.edit-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #2c3e50;
+}
+
+.attendees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attendee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.registration-date {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+  .event-details-container {
+    padding: 1rem;
+  }
+
+  .event-details-card .event-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .event-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-actions {
+    flex-direction: column;
+  }
+
+  .attendee-item {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+} 
