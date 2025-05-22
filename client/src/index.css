@@ -1,13 +1,121 @@
-body {
+:root {
+  /* Light theme */
+  --primary-color: #2563eb;
+  --primary-color-dark: #1d4ed8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-highlight: #f0f9ff;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --border-color: #e5e7eb;
+  --error-color: #ef4444;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --reminder-color: #8b5cf6;
+  --update-color: #3b82f6;
+  --comment-color: #6366f1;
+  --star-color: #fbbf24;
+}
+
+[data-theme='dark'] {
+  --primary-color: #3b82f6;
+  --primary-color-dark: #2563eb;
+  --bg-primary: #1f2937;
+  --bg-secondary: #111827;
+  --bg-highlight: #1e3a8a;
+  --text-primary: #f9fafb;
+  --text-secondary: #e5e7eb;
+  --text-tertiary: #9ca3af;
+  --border-color: #374151;
+  --error-color: #f87171;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --reminder-color: #a78bfa;
+  --update-color: #60a5fa;
+  --comment-color: #818cf8;
+  --star-color: #fbbf24;
+}
+
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-color-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-secondary);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --primary-color: #3b82f6;
+    --primary-color-dark: #2563eb;
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-highlight: #1e3a8a;
+    --text-primary: #f9fafb;
+    --text-secondary: #e5e7eb;
+    --text-tertiary: #9ca3af;
+    --border-color: #374151;
+    --error-color: #f87171;
+    --success-color: #34d399;
+    --warning-color: #fbbf24;
+    --reminder-color: #a78bfa;
+    --update-color: #60a5fa;
+    --comment-color: #818cf8;
+    --star-color: #fbbf24;
+  }
 } 

@@ -8,6 +8,10 @@ const { errorHandler } = require('./middleware/errorHandler');
 // Import routes
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
+const profileRoutes = require('./routes/profile');
+const engagementRoutes = require('./routes/engagement');
+const analyticsRoutes = require('./routes/analytics');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -22,6 +26,10 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/engagement', engagementRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling
 app.use(errorHandler);

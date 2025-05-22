@@ -75,7 +75,12 @@ router.post('/login',
 
 // Get current user
 router.get('/me', auth, async (req, res) => {
-  res.json(req.user);
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // Update profile
