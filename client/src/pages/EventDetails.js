@@ -76,6 +76,16 @@ const EventDetails = () => {
           <span className={`event-status ${event.status}`}>{event.status}</span>
         </div>
 
+        {event.image && event.image.url && (
+          <div className="event-image-container">
+            <img 
+              src={event.image.url} 
+              alt={event.image.alt || "Event image"} 
+              className="event-image"
+            />
+          </div>
+        )}
+
         <div className="event-info-grid">
           <div className="event-info-item">
             <span className="label">Date</span>

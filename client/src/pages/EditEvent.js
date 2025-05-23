@@ -14,10 +14,7 @@ const EditEvent = () => {
     capacity: '',
     price: '',
     category: '',
-    image: {
-      url: '',
-      alt: ''
-    },
+    imageAlt: '',
     tags: [],
     socialSharing: {
       enabled: true,
@@ -31,6 +28,8 @@ const EditEvent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tagInput, setTagInput] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     fetchEvent();
@@ -48,7 +47,7 @@ const EditEvent = () => {
       setFormData({
         ...event,
         date: formattedDate,
-        image: event.image || { url: '', alt: '' },
+        imageAlt: event.image?.alt || '',
         tags: event.tags || [],
         socialSharing: event.socialSharing || {
           enabled: true,
@@ -56,6 +55,11 @@ const EditEvent = () => {
           customMessage: ''
         }
       });
+
+      // Set image preview if available
+      if (event.image && event.image.url) {
+        setImagePreview(event.image.url);
+      }
     } catch (error) {
       toast.error('Failed to fetch event details');
       setError('Failed to fetch event details');
@@ -80,6 +84,20 @@ const EditEvent = () => {
         ...prev,
         [name]: value
       }));
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -118,12 +136,30 @@ const EditEvent = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
+      
+      // Create FormData object for file upload
+      const eventFormData = new FormData();
+      
+      // Add all form fields to FormData
+      Object.keys(formData).forEach(key => {
+        if (key === 'tags' || key === 'socialSharing') {
+          eventFormData.append(key, JSON.stringify(formData[key]));
+        } else if (key !== 'image' && key !== '_id' && key !== '__v' && key !== 'organizer' && key !== 'attendees' && key !== 'waitlist' && key !== 'analytics' && key !== 'createdAt') {
+          eventFormData.append(key, formData[key]);
+        }
+      });
+      
+      // Add image file if selected
+      if (imageFile) {
+        eventFormData.append('image', imageFile);
+      }
+
+      await axios.patch(
         `http://localhost:5000/api/events/${id}`,
-        formData,
+        eventFormData,
         {
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
           }
         }
@@ -284,22 +320,39 @@ const EditEvent = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Event Image</h3>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Image URL</label>
+              <label className="block text-sm font-medium text-gray-700">Upload New Image</label>
               <input
-                type="url"
-                name="image.url"
-                value={formData.image.url}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="mt-1 block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
               />
+              <p className="mt-1 text-sm text-gray-500">
+                JPG, PNG, GIF up to 5MB
+              </p>
             </div>
+            
+            {imagePreview && (
+              <div className="mt-2">
+                <img 
+                  src={imagePreview} 
+                  alt="Event preview" 
+                  className="h-48 w-full object-cover rounded-md" 
+                />
+              </div>
+            )}
+            
             <div>
               <label className="block text-sm font-medium text-gray-700">Image Alt Text</label>
               <input
                 type="text"
-                name="image.alt"
-                value={formData.image.alt}
+                name="imageAlt"
+                value={formData.imageAlt}
                 onChange={handleChange}
                 placeholder="Description of the image"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -347,30 +400,37 @@ const EditEvent = () => {
 
           {/* Social Sharing Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Social Sharing</h3>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.socialSharing.enabled}
-                onChange={(e) => handleChange({
-                  target: {
-                    name: 'socialSharing.enabled',
-                    value: e.target.checked
-                  }
-                })}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label className="text-sm font-medium text-gray-700">Enable social sharing</label>
+            <div className="flex items-center">
+              <h3 className="text-lg font-medium flex-1">Social Sharing</h3>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="socialSharingEnabled"
+                  checked={formData.socialSharing.enabled}
+                  onChange={() => setFormData(prev => ({
+                    ...prev,
+                    socialSharing: {
+                      ...prev.socialSharing,
+                      enabled: !prev.socialSharing.enabled
+                    }
+                  }))}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="socialSharingEnabled" className="ml-2 block text-sm text-gray-900">
+                  Enable social sharing
+                </label>
+              </div>
             </div>
+
             {formData.socialSharing.enabled && (
               <>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-2">
                   {['facebook', 'twitter', 'linkedin', 'whatsapp'].map((platform) => (
                     <button
                       key={platform}
                       type="button"
                       onClick={() => handleSocialPlatformToggle(platform)}
-                      className={`px-4 py-2 rounded-md ${
+                      className={`px-4 py-2 rounded-md text-sm font-medium ${
                         formData.socialSharing.platforms.includes(platform)
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-200 text-gray-700'
@@ -380,6 +440,7 @@ const EditEvent = () => {
                     </button>
                   ))}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Custom Share Message</label>
                   <textarea

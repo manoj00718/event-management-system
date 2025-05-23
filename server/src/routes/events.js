@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const { auth, authorize } = require('../middleware/auth');
 const { sendWaitlistNotifications } = require('../utils/notificationService');
 const { createEventProduct } = require('../utils/paymentService');
+const { upload, deleteImage, getImageUrl } = require('../utils/fileUploadService');
 
 const router = express.Router();
 
@@ -96,6 +97,7 @@ router.get('/:id', async (req, res) => {
 // Create event (organizer only)
 router.post('/',
   [auth, authorize('organizer', 'admin')],
+  upload.single('image'),
   [
     body('title').trim().notEmpty().withMessage('Title is required'),
     body('description').trim().notEmpty().withMessage('Description is required'),
@@ -111,7 +113,28 @@ router.post('/',
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        // If there's an uploaded file but validation failed, delete it
+        if (req.file) {
+          deleteImage(req.file.filename);
+        }
         return res.status(400).json({ errors: errors.array() });
+      }
+
+      // Parse JSON fields if they were sent as strings
+      if (req.body.tags && typeof req.body.tags === 'string') {
+        try {
+          req.body.tags = JSON.parse(req.body.tags);
+        } catch (e) {
+          req.body.tags = req.body.tags.split(',').map(tag => tag.trim());
+        }
+      }
+
+      if (req.body.socialSharing && typeof req.body.socialSharing === 'string') {
+        try {
+          req.body.socialSharing = JSON.parse(req.body.socialSharing);
+        } catch (e) {
+          // Keep as is if parsing fails
+        }
       }
 
       const eventData = {
@@ -121,9 +144,28 @@ router.post('/',
       
       // Handle coordinates if provided
       if (req.body.coordinates) {
-        eventData.coordinates = {
-          lat: parseFloat(req.body.coordinates.lat),
-          lng: parseFloat(req.body.coordinates.lng)
+        if (typeof req.body.coordinates === 'string') {
+          try {
+            eventData.coordinates = JSON.parse(req.body.coordinates);
+          } catch (e) {
+            // If parsing fails, try to extract lat/lng from string format
+            console.error('Error parsing coordinates:', e);
+          }
+        } else {
+          eventData.coordinates = {
+            lat: parseFloat(req.body.coordinates.lat),
+            lng: parseFloat(req.body.coordinates.lng)
+          };
+        }
+      }
+
+      // Handle image upload
+      if (req.file) {
+        eventData.image = {
+          url: getImageUrl(req, req.file.filename),
+          alt: req.body.imageAlt || 'Event image',
+          filename: req.file.filename,
+          originalname: req.file.originalname
         };
       }
       
@@ -142,6 +184,10 @@ router.post('/',
 
       res.status(201).json(event);
     } catch (error) {
+      // If there's an uploaded file but saving failed, delete it
+      if (req.file) {
+        deleteImage(req.file.filename);
+      }
       console.error('Error creating event:', error);
       res.status(500).json({ error: 'Server error' });
     }
@@ -151,17 +197,23 @@ router.post('/',
 // Update event (organizer only)
 router.patch('/:id',
   [auth, authorize('organizer', 'admin')],
+  upload.single('image'),
   async (req, res) => {
     try {
       const updates = Object.keys(req.body);
       const allowedUpdates = [
         'title', 'description', 'date', 'location', 'coordinates',
-        'capacity', 'price', 'isPaid', 'status', 'category', 'tags', 'image'
+        'capacity', 'price', 'isPaid', 'status', 'category', 'tags', 'image',
+        'imageAlt', 'socialSharing'
       ];
       
       const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
       if (!isValidOperation) {
+        // If there's an uploaded file but validation failed, delete it
+        if (req.file) {
+          deleteImage(req.file.filename);
+        }
         return res.status(400).json({ error: 'Invalid updates' });
       }
 
@@ -171,20 +223,69 @@ router.patch('/:id',
       });
 
       if (!event) {
+        // If there's an uploaded file but event not found, delete it
+        if (req.file) {
+          deleteImage(req.file.filename);
+        }
         return res.status(404).json({ error: 'Event not found' });
+      }
+
+      // Parse JSON fields if they were sent as strings
+      if (req.body.tags && typeof req.body.tags === 'string') {
+        try {
+          req.body.tags = JSON.parse(req.body.tags);
+        } catch (e) {
+          req.body.tags = req.body.tags.split(',').map(tag => tag.trim());
+        }
+      }
+
+      if (req.body.socialSharing && typeof req.body.socialSharing === 'string') {
+        try {
+          req.body.socialSharing = JSON.parse(req.body.socialSharing);
+        } catch (e) {
+          // Keep as is if parsing fails
+        }
       }
       
       // Special handling for coordinates
       if (req.body.coordinates) {
-        event.coordinates = {
-          lat: parseFloat(req.body.coordinates.lat),
-          lng: parseFloat(req.body.coordinates.lng)
-        };
+        if (typeof req.body.coordinates === 'string') {
+          try {
+            event.coordinates = JSON.parse(req.body.coordinates);
+          } catch (e) {
+            // If parsing fails, try to extract lat/lng from string format
+            console.error('Error parsing coordinates:', e);
+          }
+        } else {
+          event.coordinates = {
+            lat: parseFloat(req.body.coordinates.lat),
+            lng: parseFloat(req.body.coordinates.lng)
+          };
+        }
         delete req.body.coordinates;
       }
 
+      // Handle image upload
+      if (req.file) {
+        // Delete old image if it exists
+        if (event.image && event.image.filename) {
+          deleteImage(event.image.filename);
+        }
+
+        event.image = {
+          url: getImageUrl(req, req.file.filename),
+          alt: req.body.imageAlt || event.image.alt || 'Event image',
+          filename: req.file.filename,
+          originalname: req.file.originalname
+        };
+      } else if (req.body.imageAlt) {
+        // Update only the alt text if provided
+        event.image.alt = req.body.imageAlt;
+      }
+
+      // Update other fields
       updates.forEach(update => {
-        if (update !== 'coordinates') {
+        if (!['coordinates', 'image', 'imageAlt'].includes(update)) {
           event[update] = req.body[update];
         }
       });
@@ -204,6 +305,10 @@ router.patch('/:id',
 
       res.json(event);
     } catch (error) {
+      // If there's an uploaded file but saving failed, delete it
+      if (req.file) {
+        deleteImage(req.file.filename);
+      }
       console.error('Error updating event:', error);
       res.status(500).json({ error: 'Server error' });
     }

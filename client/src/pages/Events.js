@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import EventCard from '../components/EventCard';
 import '../styles/Events.css';
 
 const Events = () => {
@@ -124,33 +125,7 @@ const Events = () => {
         <div className="events-grid">
           {events.length > 0 ? (
             events.map(event => (
-              <div 
-                key={event._id} 
-                className="event-card"
-                onClick={() => navigate(`/events/${event._id}`)}
-              >
-                <div className="event-card-header">
-                  <h3>{event.title}</h3>
-                  <span className={`event-status ${event.status}`}>
-                    {event.status}
-                  </span>
-                </div>
-                <div className="event-card-body">
-                  <p className="event-description">{event.description}</p>
-                  <div className="event-details">
-                    <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                    <span>📍 {event.location}</span>
-                    <span>💰 ${event.price}</span>
-                    <span>👥 {event.attendees.length}/{event.capacity}</span>
-                  </div>
-                </div>
-                <div className="event-card-footer">
-                  <span className="event-category">{event.category}</span>
-                  <span className="event-organizer">
-                    By {event.organizer.name}
-                  </span>
-                </div>
-              </div>
+              <EventCard key={event._id} event={event} />
             ))
           ) : (
             <div className="no-events">

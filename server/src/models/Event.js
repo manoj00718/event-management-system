@@ -115,6 +115,14 @@ const eventSchema = new mongoose.Schema({
     alt: {
       type: String,
       default: 'Event image'
+    },
+    filename: {
+      type: String,
+      default: null
+    },
+    originalname: {
+      type: String,
+      default: null
     }
   },
   tags: [{

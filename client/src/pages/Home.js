@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import EventCard from '../components/EventCard';
 import '../styles/Home.css';
 
 const Home = () => {
@@ -111,44 +112,7 @@ const Home = () => {
       <div className="events-grid">
         {events.length > 0 ? (
           events.map(event => (
-            <Link to={`/events/${event._id}`} key={event._id} className="event-card">
-              <div className="event-header">
-                <h3>{event.title}</h3>
-                <span className={`event-status ${event.status}`}>{event.status}</span>
-              </div>
-              <div className="event-details">
-                <p>{event.description}</p>
-                <div className="event-info">
-                  <div className="event-info-item">
-                    <span>📅 Date:</span>
-                    <span>{new Date(event.date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="event-info-item">
-                    <span>📍 Location:</span>
-                    <span>{event.location}</span>
-                  </div>
-                  <div className="event-info-item">
-                    <span>💰 Price:</span>
-                    <span>${event.price}</span>
-                  </div>
-                  <div className="event-info-item">
-                    <span>👥 Capacity:</span>
-                    <span>{event.attendees.length} / {event.capacity}</span>
-                  </div>
-                </div>
-                <div className="event-capacity">
-                  <div className="capacity-text">
-                    {Math.round((event.attendees.length / event.capacity) * 100)}% Full
-                  </div>
-                  <div className="capacity-bar">
-                    <div 
-                      className="capacity-fill" 
-                      style={{ width: `${(event.attendees.length / event.capacity) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </Link>
+            <EventCard key={event._id} event={event} />
           ))
         ) : (
           <div className="no-events">
