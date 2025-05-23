@@ -53,7 +53,7 @@ const seedDatabase = async () => {
       {
         title: 'Tech Conference 2024',
         description: 'Annual technology conference featuring the latest innovations',
-        date: new Date('2024-06-15T09:00:00Z'),
+        date: new Date('2025-06-15T09:00:00Z'),
         location: 'Convention Center',
         capacity: 500,
         price: 299.99,
@@ -75,7 +75,7 @@ const seedDatabase = async () => {
       {
         title: 'Digital Marketing Workshop',
         description: 'Learn the latest digital marketing strategies and tools',
-        date: new Date('2024-07-20T13:00:00Z'),
+        date: new Date('2025-07-20T13:00:00Z'),
         location: 'Business Center',
         capacity: 50,
         price: 149.99,
@@ -97,7 +97,7 @@ const seedDatabase = async () => {
       {
         title: 'Startup Networking Event',
         description: 'Connect with fellow entrepreneurs and investors',
-        date: new Date('2024-08-10T18:00:00Z'),
+        date: new Date('2025-08-10T18:00:00Z'),
         location: 'Innovation Hub',
         capacity: 100,
         price: 0,
@@ -119,7 +119,7 @@ const seedDatabase = async () => {
       {
         title: 'AI & Machine Learning Summit',
         description: 'Deep dive into artificial intelligence and machine learning with industry experts',
-        date: new Date('2024-09-05T10:00:00Z'),
+        date: new Date('2025-09-05T10:00:00Z'),
         location: 'Tech Campus',
         capacity: 300,
         price: 399.99,
@@ -141,7 +141,7 @@ const seedDatabase = async () => {
       {
         title: 'Web Development Bootcamp',
         description: 'Intensive 2-day bootcamp covering modern web development technologies',
-        date: new Date('2024-07-01T09:00:00Z'),
+        date: new Date('2025-07-01T09:00:00Z'),
         location: 'Code Academy',
         capacity: 30,
         price: 199.99,
@@ -163,7 +163,7 @@ const seedDatabase = async () => {
       {
         title: 'Cybersecurity Seminar',
         description: 'Learn about the latest cybersecurity threats and protection strategies',
-        date: new Date('2024-08-20T14:00:00Z'),
+        date: new Date('2025-08-20T14:00:00Z'),
         location: 'Security Institute',
         capacity: 150,
         price: 249.99,

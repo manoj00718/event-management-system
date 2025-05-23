@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const CreateEventForm = () => {
   const navigate = useNavigate();
@@ -135,6 +136,13 @@ const CreateEventForm = () => {
     }
   };
 
+  // Social media platform icons (corrected)
+  const socialIcons = {
+    facebook: ['fab', 'facebook-f'],
+    twitter: ['fab', 'twitter'],
+    linkedin: ['fab', 'linkedin-in']
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6">Create New Event</h2>
@@ -247,28 +255,18 @@ const CreateEventForm = () => {
               type="file"
               accept="image/*"
               onChange={handleImageChange}
-              className="mt-1 block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
+              className="mt-1 block w-full text-sm text-gray-500"
             />
-            <p className="mt-1 text-sm text-gray-500">
-              JPG, PNG, GIF up to 5MB
-            </p>
           </div>
-          
           {imagePreview && (
             <div className="mt-2">
-              <img 
-                src={imagePreview} 
-                alt="Event preview" 
-                className="h-48 w-full object-cover rounded-md" 
+              <img
+                src={imagePreview}
+                alt="Event Preview"
+                className="h-40 object-cover rounded-md"
               />
             </div>
           )}
-          
           <div>
             <label className="block text-sm font-medium text-gray-700">Image Alt Text</label>
             <input
@@ -276,7 +274,7 @@ const CreateEventForm = () => {
               name="imageAlt"
               value={formData.imageAlt}
               onChange={handleChange}
-              placeholder="Description of the image"
+              placeholder="Descriptive text for the image"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -285,84 +283,90 @@ const CreateEventForm = () => {
         {/* Tags Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Tags</h3>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <input
               type="text"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
-              placeholder="Add a tag"
-              className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleTagAdd();
+                }
+              }}
+              placeholder="Add tags"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             <button
               type="button"
               onClick={handleTagAdd}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              className="inline-flex items-center justify-center p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
             >
               Add
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {formData.tags.map((tag, index) => (
-              <span
+              <div
                 key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                className="inline-flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
               >
-                {tag}
+                <span>{tag}</span>
                 <button
                   type="button"
                   onClick={() => handleTagRemove(tag)}
-                  className="ml-2 text-blue-600 hover:text-blue-800"
+                  className="ml-1 text-blue-600 hover:text-blue-900"
                 >
                   ×
                 </button>
-              </span>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Social Sharing Section */}
         <div className="space-y-4">
+          <h3 className="text-lg font-medium">Social Sharing</h3>
           <div className="flex items-center">
-            <h3 className="text-lg font-medium flex-1">Social Sharing</h3>
-            <div className="flex items-center">
+            <label className="inline-flex items-center">
               <input
                 type="checkbox"
-                id="socialSharingEnabled"
+                name="socialSharing.enabled"
                 checked={formData.socialSharing.enabled}
-                onChange={() => setFormData(prev => ({
-                  ...prev,
-                  socialSharing: {
-                    ...prev.socialSharing,
-                    enabled: !prev.socialSharing.enabled
-                  }
-                }))}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    socialSharing: {
+                      ...prev.socialSharing,
+                      enabled: e.target.checked
+                    }
+                  }));
+                }}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
-              <label htmlFor="socialSharingEnabled" className="ml-2 block text-sm text-gray-900">
-                Enable social sharing
-              </label>
-            </div>
+              <span className="ml-2">Enable Social Sharing</span>
+            </label>
           </div>
-
+          
           {formData.socialSharing.enabled && (
             <>
-              <div className="flex flex-wrap gap-2">
-                {['facebook', 'twitter', 'linkedin', 'whatsapp'].map((platform) => (
+              <div className="flex space-x-4">
+                {Object.entries(socialIcons).map(([platform, icon]) => (
                   <button
                     key={platform}
                     type="button"
                     onClick={() => handleSocialPlatformToggle(platform)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
+                    className={`p-3 rounded-full flex items-center justify-center ${
                       formData.socialSharing.platforms.includes(platform)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-500'
                     }`}
                   >
-                    {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                    <FontAwesomeIcon icon={icon} />
                   </button>
                 ))}
               </div>
-
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">Custom Share Message</label>
                 <textarea
@@ -370,21 +374,27 @@ const CreateEventForm = () => {
                   value={formData.socialSharing.customMessage}
                   onChange={handleChange}
                   placeholder="Enter a custom message for social sharing"
-                  rows="2"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  rows="3"
                 />
               </div>
             </>
           )}
         </div>
 
-        <div className="flex justify-end">
+        {/* Submit Button */}
+        <div className="flex justify-end mt-8">
+          <button
+            type="button"
+            onClick={() => navigate('/events')}
+            className="mr-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={loading}
-            className={`px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Event'}
           </button>

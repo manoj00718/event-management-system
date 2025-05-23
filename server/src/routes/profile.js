@@ -17,6 +17,28 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Get user's registered events (bookings)
+router.get('/bookings', auth, async (req, res) => {
+  try {
+    // Find events where the user is in the attendees list
+    const events = await Event.find({
+      'attendees.user': req.user.id
+    })
+    .select('title description date location image price category status capacity attendees organizer')
+    .populate('organizer', 'name email');
+    
+    if (!events || events.length === 0) {
+      return res.json([]);
+    }
+    
+    console.log(`Found ${events.length} events for user ${req.user.id}`);
+    res.json(events);
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Update user profile
 router.patch('/me', auth, [
   body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
@@ -149,6 +171,23 @@ router.get('/stats', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     res.json(user.stats);
   } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get events created by the organizer
+router.get('/events', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'organizer' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only organizers can access their created events' });
+    }
+    
+    const events = await Event.find({ organizer: req.user.id })
+      .select('title description date location image price category status capacity attendees');
+    
+    res.json(events);
+  } catch (error) {
+    console.error('Error fetching organizer events:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

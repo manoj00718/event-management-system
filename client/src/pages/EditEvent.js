@@ -1,9 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import LoadingSpinner from '../components/LoadingSpinner';
+import api from '../services/api';
 import '../styles/EventForm.css';
+import { safeApiCall } from '../utils/errorHandler';
+import ErrorState from '../components/ErrorState';
+
+// Sample event for when backend is not available
+const SAMPLE_EVENT = {
+  _id: '1',
+  title: 'Tech Conference 2024',
+  description: 'Annual technology conference featuring the latest innovations',
+  date: new Date('2024-06-15T09:00:00Z').toISOString().slice(0, 16),
+  location: 'Convention Center',
+  capacity: 500,
+  price: 299.99,
+  category: 'conference',
+  status: 'upcoming',
+  tags: ['technology', 'innovation', 'networking'],
+  attendees: [],
+  image: {
+    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+    alt: 'Tech Conference Hall'
+  },
+  socialSharing: {
+    enabled: true,
+    platforms: ['facebook', 'twitter', 'linkedin'],
+    customMessage: 'Join us at the biggest tech conference of 2024!'
+  }
+};
 
 const EditEvent = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +42,7 @@ const EditEvent = () => {
     capacity: '',
     price: '',
     category: '',
+    status: 'upcoming',
     imageAlt: '',
     tags: [],
     socialSharing: {
@@ -22,25 +51,50 @@ const EditEvent = () => {
       customMessage: ''
     }
   });
+  
+  const [formErrors, setFormErrors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [useMockData, setUseMockData] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tagInput, setTagInput] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user && user.role === 'user') {
+      toast.error('You do not have permission to edit events');
+      navigate('/events');
+      return;
+    }
+    
     fetchEvent();
-  }, [id]);
+  }, [id, user, navigate]);
 
   const fetchEvent = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/events/${id}`);
-      const event = response.data;
+      setLoading(true);
+      
+      const { data, isMockData } = await safeApiCall(
+        () => api.events.getById(id), 
+        { ...SAMPLE_EVENT, _id: id },
+        {
+          onNetworkError: () => {
+            setUseMockData(true);
+          }
+        }
+      );
       
       // Format date for datetime-local input
+      const event = data;
       const eventDate = new Date(event.date);
       const formattedDate = eventDate.toISOString().slice(0, 16);
 
@@ -60,16 +114,59 @@ const EditEvent = () => {
       if (event.image && event.image.url) {
         setImagePreview(event.image.url);
       }
+      
+      setUseMockData(isMockData);
+      
+      if (isMockData) {
+        toast.info('Using demo data as the server is not available', {
+          toastId: 'mock-data-notice', // Prevent duplicate toasts
+          autoClose: 5000
+        });
+      }
     } catch (error) {
-      toast.error('Failed to fetch event details');
-      setError('Failed to fetch event details');
+      console.error('Failed to fetch event details:', error);
+      toast.error('Failed to load event data');
     } finally {
       setLoading(false);
     }
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.title.trim()) errors.title = 'Title is required';
+    if (!formData.description.trim()) errors.description = 'Description is required';
+    if (!formData.date) errors.date = 'Date is required';
+    if (!formData.location.trim()) errors.location = 'Location is required';
+    
+    if (!formData.capacity) {
+      errors.capacity = 'Capacity is required';
+    } else if (isNaN(formData.capacity) || parseInt(formData.capacity) <= 0) {
+      errors.capacity = 'Capacity must be a positive number';
+    }
+    
+    if (formData.price === '') {
+      errors.price = 'Price is required';
+    } else if (isNaN(formData.price) || parseFloat(formData.price) < 0) {
+      errors.price = 'Price must be a non-negative number';
+    }
+    
+    if (!formData.category) errors.category = 'Category is required';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: ''
+      });
+    }
+    
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
@@ -90,6 +187,17 @@ const EditEvent = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Only JPG, PNG, and GIF formats are supported');
+        return;
+      }
+      
       setImageFile(file);
       
       // Create preview URL
@@ -108,6 +216,13 @@ const EditEvent = () => {
         tags: [...prev.tags, tagInput.trim()]
       }));
       setTagInput('');
+    }
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTagAdd();
     }
   };
 
@@ -132,11 +247,23 @@ const EditEvent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
+    
+    if (!validateForm()) {
+      toast.error('Please fix the validation errors before submitting');
+      return;
+    }
+    
+    setSubmitLoading(true);
+    
     try {
-      const token = localStorage.getItem('token');
-      
+      if (useMockData) {
+        // Simulate API call success
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        toast.success('Event updated successfully!');
+        navigate(`/events/${id}`);
+        return;
+      }
+
       // Create FormData object for file upload
       const eventFormData = new FormData();
       
@@ -154,325 +281,420 @@ const EditEvent = () => {
         eventFormData.append('image', imageFile);
       }
 
-      await axios.patch(
-        `http://localhost:5000/api/events/${id}`,
-        eventFormData,
+      const { isSuccess, error } = await safeApiCall(
+        () => api.events.update(id, eventFormData),
+        null,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`
-          }
+          fallbackMessage: 'Failed to update event'
         }
       );
-      toast.success('🎉 Event updated successfully!');
-      navigate(`/events/${id}`);
+
+      if (isSuccess) {
+        toast.success('Event updated successfully!');
+        navigate(`/events/${id}`);
+      } else if (error) {
+        // Error is already handled by safeApiCall
+        console.error('Update error:', error);
+      }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Failed to update event';
-      toast.error(`❌ ${errorMessage}`);
-      setError(errorMessage);
+      toast.error(error.response?.data?.message || 'Failed to update event');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      setDeleteLoading(true);
+      
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(
-          `http://localhost:5000/api/events/${id}`,
+        if (useMockData) {
+          // Simulate API call success
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          toast.success('Event deleted successfully');
+          navigate('/events');
+          return;
+        }
+        
+        const { isSuccess, error } = await safeApiCall(
+          () => api.events.delete(id),
+          null,
           {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            fallbackMessage: 'Failed to delete event'
           }
         );
-        toast.success('Event deleted successfully');
-        navigate('/events');
+
+        if (isSuccess) {
+          toast.success('Event deleted successfully');
+          navigate('/events');
+        } else if (error) {
+          // Error is already handled by safeApiCall
+          console.error('Delete error:', error);
+        }
       } catch (error) {
-        toast.error(error.response?.data?.error || 'Failed to delete event');
+        toast.error(error.response?.data?.message || 'Failed to delete event');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
 
   if (loading) {
-    return <div className="loading">Loading event details...</div>;
-  }
-
-  if (!user || (user.role !== 'organizer' && user.role !== 'admin')) {
-    navigate('/');
-    return null;
+    return (
+      <div className="loading-container">
+        <LoadingSpinner size="large" />
+        <p>Loading event details...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Edit Event</h2>
-          <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-          >
-            Delete Event
-          </button>
+    <div className="event-form-container">
+      <div className="event-form-header">
+        <h1>Edit Event</h1>
+        <button
+          onClick={handleDelete}
+          className="delete-event-btn"
+          disabled={deleteLoading}
+        >
+          {deleteLoading ? (
+            <>
+              <LoadingSpinner size="small" color="white" /> Deleting...
+            </>
+          ) : (
+            <>
+              <FontAwesomeIcon icon="trash-alt" /> Delete Event
+            </>
+          )}
+        </button>
+      </div>
+      
+      {useMockData && (
+        <div className="mock-data-notice">
+          <FontAwesomeIcon icon="exclamation-triangle" />
+          <span>Using demo data for preview. Connect to server for real functionality.</span>
         </div>
-        
-        {error && <div className="error-message mb-4">{error}</div>}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
+      )}
+      
+      {Object.keys(formErrors).length > 0 && (
+        <div className="form-errors-container">
+          <div className="form-errors-header">
+            <FontAwesomeIcon icon="exclamation-circle" /> Invalid updates
+          </div>
+          <ul className="form-errors-list">
+            {Object.entries(formErrors).map(([field, error]) => (
+              <li key={field}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="event-form">
+        <div className="form-section">
+          <div className="form-field">
+            <label htmlFor="title">Title</label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className={formErrors.title ? 'error' : ''}
+            />
+            {formErrors.title && <div className="field-error">{formErrors.title}</div>}
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows="5"
+              className={formErrors.description ? 'error' : ''}
+            />
+            {formErrors.description && <div className="field-error">{formErrors.description}</div>}
+          </div>
+
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor="date">Date</label>
+              <input
+                type="datetime-local"
+                id="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                className={formErrors.date ? 'error' : ''}
+              />
+              {formErrors.date && <div className="field-error">{formErrors.date}</div>}
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="location">Location</label>
               <input
                 type="text"
-                name="title"
-                value={formData.title}
+                id="location"
+                name="location"
+                value={formData.location}
                 onChange={handleChange}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className={formErrors.location ? 'error' : ''}
               />
+              {formErrors.location && <div className="field-error">{formErrors.location}</div>}
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor="capacity">Capacity</label>
+              <input
+                type="number"
+                id="capacity"
+                name="capacity"
+                value={formData.capacity}
                 onChange={handleChange}
-                required
-                rows="4"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                min="1"
+                className={formErrors.capacity ? 'error' : ''}
               />
+              {formErrors.capacity && <div className="field-error">{formErrors.capacity}</div>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Date</label>
-                <input
-                  type="datetime-local"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
+            <div className="form-field">
+              <label htmlFor="price">Price</label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className={formErrors.price ? 'error' : ''}
+              />
+              {formErrors.price && <div className="field-error">{formErrors.price}</div>}
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Capacity</label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Price</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Category</label>
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor="category">Category</label>
               <select
+                id="category"
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className={formErrors.category ? 'error' : ''}
               >
+                <option value="">Select a category</option>
                 <option value="conference">Conference</option>
                 <option value="workshop">Workshop</option>
                 <option value="seminar">Seminar</option>
                 <option value="networking">Networking</option>
                 <option value="other">Other</option>
               </select>
+              {formErrors.category && <div className="field-error">{formErrors.category}</div>}
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="status">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          {/* Image Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Event Image</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Upload New Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="mt-1 block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                JPG, PNG, GIF up to 5MB
-              </p>
-            </div>
-            
+        <div className="form-section">
+          <h2>Event Image</h2>
+          
+          <div className="image-preview-container">
             {imagePreview && (
-              <div className="mt-2">
-                <img 
-                  src={imagePreview} 
-                  alt="Event preview" 
-                  className="h-48 w-full object-cover rounded-md" 
-                />
+              <div className="image-preview">
+                <img src={imagePreview} alt="Event preview" />
               </div>
             )}
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Image Alt Text</label>
+            <div className="image-upload">
+              <label htmlFor="image" className="upload-label">
+                <FontAwesomeIcon icon="cloud-upload-alt" />
+                <span>Upload New Image</span>
+              </label>
               <input
-                type="text"
-                name="imageAlt"
-                value={formData.imageAlt}
-                onChange={handleChange}
-                placeholder="Description of the image"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                type="file"
+                id="image"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="file-input"
               />
+              <p className="image-requirements">JPG, PNG, GIF up to 5MB</p>
             </div>
           </div>
-
-          {/* Tags Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Tags</h3>
-            <div className="flex gap-2">
+          
+          <div className="form-field">
+            <label htmlFor="imageAlt">Image Alt Text</label>
+            <input
+              type="text"
+              id="imageAlt"
+              name="imageAlt"
+              value={formData.imageAlt}
+              onChange={handleChange}
+              placeholder="Describe the image for accessibility"
+            />
+          </div>
+        </div>
+        
+        <div className="form-section">
+          <h2>Tags</h2>
+          <div className="tags-input-container">
+            <div className="tags-input">
               <input
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                placeholder="Add a tag"
-                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                onKeyDown={handleTagKeyDown}
+                placeholder="Add tags (press Enter to add)"
               />
               <button
                 type="button"
                 onClick={handleTagAdd}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                className="add-tag-btn"
               >
-                Add
+                <FontAwesomeIcon icon="plus" />
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleTagRemove(tag)}
-                    className="ml-2 text-blue-600 hover:text-blue-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
+            
+            {formData.tags.length > 0 && (
+              <div className="tags-list">
+                {formData.tags.map(tag => (
+                  <div key={tag} className="tag">
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleTagRemove(tag)}
+                      className="remove-tag-btn"
+                    >
+                      <FontAwesomeIcon icon="times" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-
-          {/* Social Sharing Section */}
-          <div className="space-y-4">
-            <div className="flex items-center">
-              <h3 className="text-lg font-medium flex-1">Social Sharing</h3>
-              <div className="flex items-center">
+        </div>
+        
+        <div className="form-section">
+          <h2>Social Sharing</h2>
+          <div className="social-sharing-container">
+            <div className="form-field toggle-field">
+              <label htmlFor="socialSharing.enabled">Enable Social Sharing</label>
+              <label className="toggle-switch">
                 <input
                   type="checkbox"
-                  id="socialSharingEnabled"
+                  id="socialSharing.enabled"
+                  name="socialSharing.enabled"
                   checked={formData.socialSharing.enabled}
-                  onChange={() => setFormData(prev => ({
-                    ...prev,
-                    socialSharing: {
-                      ...prev.socialSharing,
-                      enabled: !prev.socialSharing.enabled
-                    }
-                  }))}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      socialSharing: {
+                        ...prev.socialSharing,
+                        enabled: e.target.checked
+                      }
+                    }));
+                  }}
                 />
-                <label htmlFor="socialSharingEnabled" className="ml-2 block text-sm text-gray-900">
-                  Enable social sharing
-                </label>
-              </div>
+                <span className="toggle-slider"></span>
+              </label>
             </div>
-
+            
             {formData.socialSharing.enabled && (
               <>
-                <div className="flex flex-wrap gap-2">
-                  {['facebook', 'twitter', 'linkedin', 'whatsapp'].map((platform) => (
+                <div className="social-platforms">
+                  <div className="platform-option">
                     <button
-                      key={platform}
                       type="button"
-                      onClick={() => handleSocialPlatformToggle(platform)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium ${
-                        formData.socialSharing.platforms.includes(platform)
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
+                      className={`platform-btn ${formData.socialSharing.platforms.includes('facebook') ? 'active' : ''}`}
+                      onClick={() => handleSocialPlatformToggle('facebook')}
                     >
-                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      <FontAwesomeIcon icon={['fab', 'facebook-f']} />
+                      <span>Facebook</span>
                     </button>
-                  ))}
+                  </div>
+                  
+                  <div className="platform-option">
+                    <button
+                      type="button"
+                      className={`platform-btn ${formData.socialSharing.platforms.includes('twitter') ? 'active' : ''}`}
+                      onClick={() => handleSocialPlatformToggle('twitter')}
+                    >
+                      <FontAwesomeIcon icon={['fab', 'twitter']} />
+                      <span>Twitter</span>
+                    </button>
+                  </div>
+                  
+                  <div className="platform-option">
+                    <button
+                      type="button"
+                      className={`platform-btn ${formData.socialSharing.platforms.includes('linkedin') ? 'active' : ''}`}
+                      onClick={() => handleSocialPlatformToggle('linkedin')}
+                    >
+                      <FontAwesomeIcon icon={['fab', 'linkedin-in']} />
+                      <span>LinkedIn</span>
+                    </button>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Custom Share Message</label>
+                
+                <div className="form-field">
+                  <label htmlFor="socialSharing.customMessage">Custom Share Message</label>
                   <textarea
+                    id="socialSharing.customMessage"
                     name="socialSharing.customMessage"
                     value={formData.socialSharing.customMessage}
                     onChange={handleChange}
                     placeholder="Enter a custom message for social sharing"
-                    rows="2"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    rows="3"
                   />
                 </div>
               </>
             )}
           </div>
-
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => navigate(`/events/${id}`)}
-              className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-            >
-              Update Event
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+        
+        <div className="form-actions">
+          <button
+            type="button"
+            onClick={() => navigate(`/events/${id}`)}
+            className="cancel-btn"
+          >
+            <FontAwesomeIcon icon="times" /> Cancel
+          </button>
+          
+          <button
+            type="submit"
+            className="submit-btn"
+            disabled={submitLoading}
+          >
+            {submitLoading ? (
+              <>
+                <LoadingSpinner size="small" color="white" /> Updating...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon="save" /> Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

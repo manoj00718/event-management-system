@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import { toast } from 'react-toastify';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +12,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       checkAuthStatus();
     } else {
       setLoading(false);
@@ -21,12 +21,13 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/me');
+      setLoading(true);
+      const response = await api.auth.me();
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (error) {
+      console.error('Auth check failed:', error);
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
@@ -35,59 +36,111 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
-        email,
-        password
-      });
+      setLoading(true);
+      const response = await api.auth.login({ email, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
       setIsAuthenticated(true);
+      toast.success('Welcome back!');
       return { success: true };
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
       return {
         success: false,
-        error: error.response?.data?.error || 'Login failed'
+        error: errorMessage
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+      setLoading(true);
+      const response = await api.auth.register(userData);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(user);
       setIsAuthenticated(true);
+      toast.success('Registration successful! Welcome to EventHub.');
       return { success: true };
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(errorMessage);
       return {
         success: false,
-        error: error.response?.data?.error || 'Registration failed'
+        error: errorMessage
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     setIsAuthenticated(false);
+    toast.info('You have been logged out.');
   };
 
   const updateProfile = async (userData) => {
     try {
-      const response = await axios.put('http://localhost:5000/api/auth/profile', userData);
+      setLoading(true);
+      const response = await api.auth.updateProfile(userData);
       setUser(response.data);
+      toast.success('Profile updated successfully!');
       return { success: true };
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Profile update failed.';
+      toast.error(errorMessage);
       return {
         success: false,
-        error: error.response?.data?.error || 'Profile update failed'
+        error: errorMessage
       };
+    } finally {
+      setLoading(false);
     }
+  };
+  
+  // Mock function to simulate auth for development
+  const devLogin = (role) => {
+    const mockUsers = {
+      admin: {
+        _id: 'admin-user-id',
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+        profileImage: {
+          url: 'https://randomuser.me/api/portraits/men/1.jpg'
+        }
+      },
+      organizer: {
+        _id: 'organizer-user-id',
+        name: 'Event Organizer',
+        email: 'organizer@example.com',
+        role: 'organizer',
+        profileImage: {
+          url: 'https://randomuser.me/api/portraits/women/2.jpg'
+        }
+      },
+      user: {
+        _id: 'regular-user-id',
+        name: 'Regular User',
+        email: 'user@example.com',
+        role: 'user',
+        profileImage: {
+          url: 'https://randomuser.me/api/portraits/men/3.jpg'
+        }
+      }
+    };
+    
+    const selectedUser = mockUsers[role] || mockUsers.user;
+    setUser(selectedUser);
+    setIsAuthenticated(true);
+    localStorage.setItem('token', 'mock-token-for-development');
+    toast.success(`Logged in as ${selectedUser.name} (${selectedUser.role})`);
   };
 
   return (
@@ -99,7 +152,9 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        updateProfile
+        updateProfile,
+        devLogin, // Only for development
+        checkAuthStatus
       }}
     >
       {children}

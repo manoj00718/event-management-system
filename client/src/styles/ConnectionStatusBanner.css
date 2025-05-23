@@ -1,0 +1,134 @@
+.connection-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.connection-banner.success {
+  background-color: #dcfce7;
+  border-bottom: 1px solid #86efac;
+  color: #166534;
+}
+
+.connection-banner.warning {
+  background-color: #fffbeb;
+  border-bottom: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+.connection-banner.error {
+  background-color: #fee2e2;
+  border-bottom: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.banner-icon {
+  font-size: 1.25rem;
+}
+
+.banner-message {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-message span {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.banner-submessage {
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0 0;
+  opacity: 0.8;
+}
+
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.retry-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: none;
+  border: 1px solid currentColor;
+}
+
+.success .retry-button {
+  color: #166534;
+}
+
+.warning .retry-button {
+  color: #92400e;
+}
+
+.error .retry-button {
+  color: #b91c1c;
+}
+
+.retry-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dismiss-button {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: inherit;
+}
+
+.dismiss-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .connection-banner {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  
+  .banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+} 

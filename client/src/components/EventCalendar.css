@@ -1,106 +1,419 @@
-.event-calendar {
-  padding: 20px;
-  background-color: #fff;
+.event-calendar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background-color: var(--background-color);
+}
+
+.calendar-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.calendar-header h2 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.calendar-header p {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin-bottom: 1.5rem;
+}
+
+.add-event-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-event-btn:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.event-calendar {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+/* FullCalendar Custom Styles */
+.fc-theme-standard .fc-view {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.fc .fc-button-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.fc .fc-button-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.fc-daygrid-day-top {
+  padding: 0.5rem;
+}
+
+.fc-daygrid-day-number {
+  font-weight: 500;
+}
+
+.fc-day-today {
+  background-color: rgba(79, 70, 229, 0.1) !important;
+}
+
+.fc-event {
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  border: none;
 }
 
 .fc-event-content {
-  padding: 2px;
+  padding: 0.25rem;
 }
 
 .fc-event-title {
+  font-weight: 500;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.paid-badge, .registered-badge {
+  font-size: 0.7rem;
   font-weight: bold;
-  margin-bottom: 2px;
+  padding: 0.15rem 0.35rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  margin-left: 0.25rem;
+}
+
+.fc-event-location {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  margin-top: 0.15rem;
+}
+
+.fc-event-attendees {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-top: 0.15rem;
+}
+
+/* Event Modal Styles */
+.event-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.event-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.event-modal-content {
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(-20px);
+  transition: all 0.3s;
+}
+
+.event-modal-overlay.active .event-modal-content {
+  transform: translateY(0);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.fc-event-location {
-  font-size: 0.8em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0;
 }
 
-.fc-event-attendees {
-  font-size: 0.75em;
-  opacity: 0.8;
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.paid-badge {
-  background-color: #ffc107;
-  color: #212529;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
+.close-modal-btn:hover {
+  color: var(--text-dark);
+}
+
+.event-form {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  outline: none;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.cancel-btn,
+.submit-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-dark);
+}
+
+.cancel-btn:hover {
+  background-color: var(--background-light);
+}
+
+.submit-btn {
+  background-color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  color: white;
+}
+
+.submit-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+.calendar-loading,
+.calendar-error {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 0.7em;
-  margin-left: 4px;
-  font-weight: bold;
+  padding: 4rem 0;
+  gap: 1rem;
+  text-align: center;
+}
+
+.calendar-loading {
+  color: var(--primary-color);
+}
+
+.calendar-error {
+  color: #dc3545;
+}
+
+.calendar-loading svg,
+.calendar-error svg {
+  font-size: 2rem;
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  body.dark-mode .event-calendar {
-    background-color: #222;
-    color: #f8f9fa;
-  }
-  
-  body.dark-mode .fc-theme-standard .fc-list-day-cushion {
-    background-color: #333;
-  }
-  
-  body.dark-mode .fc-theme-standard .fc-list-event:hover td {
-    background-color: #444;
-  }
-  
-  body.dark-mode .fc-theme-standard td, 
-  body.dark-mode .fc-theme-standard th {
-    border-color: #444;
-  }
-  
-  body.dark-mode .fc-theme-standard .fc-popover {
-    background-color: #333;
-    border-color: #444;
-  }
-  
-  body.dark-mode .fc-theme-standard .fc-popover-header {
-    background-color: #444;
-  }
+body[data-theme="dark"] .event-calendar {
+  background-color: var(--background-card-dark);
+  border-color: var(--border-color-dark);
 }
 
-/* Loading and error states */
-.loading, .error {
-  padding: 20px;
-  text-align: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  margin: 20px 0;
+body[data-theme="dark"] .fc-theme-standard td,
+body[data-theme="dark"] .fc-theme-standard th {
+  border-color: var(--border-color-dark);
 }
 
-.error {
-  color: #dc3545;
-  border: 1px solid #dc3545;
+body[data-theme="dark"] .fc-day-today {
+  background-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+body[data-theme="dark"] .event-modal-content {
+  background-color: var(--background-card-dark);
+}
+
+body[data-theme="dark"] .modal-header {
+  border-color: var(--border-color-dark);
+}
+
+body[data-theme="dark"] .form-group input,
+body[data-theme="dark"] .form-group select,
+body[data-theme="dark"] .form-group textarea {
+  background-color: var(--background-dark);
+  border-color: var(--border-color-dark);
+  color: var(--text-light);
+}
+
+body[data-theme="dark"] .cancel-btn {
+  border-color: var(--border-color-dark);
+  color: var(--text-light);
+}
+
+body[data-theme="dark"] .cancel-btn:hover {
+  background-color: var(--background-light-dark);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .event-calendar {
-    padding: 10px;
+  .form-row {
+    grid-template-columns: 1fr;
   }
   
-  .fc-header-toolbar {
+  .calendar-header h2 {
+    font-size: 1.75rem;
+  }
+  
+  .fc .fc-toolbar {
     flex-direction: column;
-    gap: 10px;
+    gap: 1rem;
   }
   
-  .fc-toolbar-chunk {
-    display: flex;
-    justify-content: center;
+  .event-calendar-container {
+    padding: 1rem;
   }
+  
+  .event-calendar {
+    padding: 1rem;
+  }
+}
+
+.calendar-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.refresh-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--secondary-color, #6c757d);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background-color: var(--secondary-dark, #5a6268);
+  transform: translateY(-2px);
+}
+
+.refresh-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.refresh-btn:hover svg {
+  transform: rotate(180deg);
 } 

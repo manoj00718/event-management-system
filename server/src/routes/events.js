@@ -217,10 +217,16 @@ router.patch('/:id',
         return res.status(400).json({ error: 'Invalid updates' });
       }
 
-      const event = await Event.findOne({
-        _id: req.params.id,
-        organizer: req.user.id
-      });
+      // Find the event - allow admins to edit any event
+      let event;
+      if (req.user.role === 'admin') {
+        event = await Event.findById(req.params.id);
+      } else {
+        event = await Event.findOne({
+          _id: req.params.id,
+          organizer: req.user.id
+        });
+      }
 
       if (!event) {
         // If there's an uploaded file but event not found, delete it
@@ -244,6 +250,7 @@ router.patch('/:id',
           req.body.socialSharing = JSON.parse(req.body.socialSharing);
         } catch (e) {
           // Keep as is if parsing fails
+          console.error('Error parsing socialSharing:', e);
         }
       }
       
@@ -280,7 +287,16 @@ router.patch('/:id',
         };
       } else if (req.body.imageAlt) {
         // Update only the alt text if provided
-        event.image.alt = req.body.imageAlt;
+        if (event.image) {
+          event.image.alt = req.body.imageAlt;
+        } else {
+          event.image = {
+            url: 'https://via.placeholder.com/800x400',
+            alt: req.body.imageAlt,
+            filename: null,
+            originalname: null
+          };
+        }
       }
 
       // Update other fields
@@ -474,16 +490,28 @@ router.post('/:id/check-in/:userId', [auth, authorize('organizer', 'admin')], as
 // Delete event (organizer only)
 router.delete('/:id', [auth, authorize('organizer', 'admin')], async (req, res) => {
   try {
-    const event = await Event.findOne({
-      _id: req.params.id,
-      organizer: req.user.id
-    });
+    // Find the event - allow admins to delete any event
+    let event;
+    if (req.user.role === 'admin') {
+      event = await Event.findById(req.params.id);
+    } else {
+      event = await Event.findOne({
+        _id: req.params.id,
+        organizer: req.user.id
+      });
+    }
     
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
     
-    await event.remove();
+    // Delete the event image file if it exists
+    if (event.image && event.image.filename) {
+      deleteImage(event.image.filename);
+    }
+    
+    // Use findByIdAndDelete instead of remove()
+    await Event.findByIdAndDelete(req.params.id);
     
     res.json({
       success: true,
