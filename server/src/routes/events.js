@@ -2,17 +2,48 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const { auth, authorize } = require('../middleware/auth');
+const { sendWaitlistNotifications } = require('../utils/notificationService');
+const { createEventProduct } = require('../utils/paymentService');
 
 const router = express.Router();
 
 // Get all events with filtering and pagination
 router.get('/', async (req, res) => {
   try {
-    const { category, status, search, page = 1, limit = 10 } = req.query;
+    const { 
+      category, 
+      status, 
+      search, 
+      page = 1, 
+      limit = 10,
+      isPaid,
+      minPrice,
+      maxPrice,
+      tags,
+      location
+    } = req.query;
+    
     const query = {};
 
     if (category) query.category = category;
     if (status) query.status = status;
+    if (isPaid !== undefined) query.isPaid = isPaid === 'true';
+    
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+      if (minPrice !== undefined) query.price.$gte = parseFloat(minPrice);
+      if (maxPrice !== undefined) query.price.$lte = parseFloat(maxPrice);
+    }
+    
+    if (tags) {
+      const tagArray = tags.split(',').map(tag => tag.trim());
+      query.tags = { $in: tagArray };
+    }
+    
+    if (location) {
+      query.location = { $regex: location, $options: 'i' };
+    }
+    
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -31,9 +62,11 @@ router.get('/', async (req, res) => {
     res.json({
       events,
       totalPages: Math.ceil(total / limit),
-      currentPage: page
+      currentPage: parseInt(page),
+      totalEvents: total
     });
   } catch (error) {
+    console.error('Error getting events:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -48,9 +81,14 @@ router.get('/:id', async (req, res) => {
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
+    
+    // Increment view count
+    event.analytics.views += 1;
+    await event.save();
 
     res.json(event);
   } catch (error) {
+    console.error('Error getting event:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -65,6 +103,7 @@ router.post('/',
     body('location').trim().notEmpty().withMessage('Location is required'),
     body('capacity').isInt({ min: 1 }).withMessage('Capacity must be at least 1'),
     body('price').isFloat({ min: 0 }).withMessage('Price must be non-negative'),
+    body('isPaid').isBoolean().optional().withMessage('isPaid must be a boolean'),
     body('category').isIn(['conference', 'workshop', 'seminar', 'networking', 'other'])
       .withMessage('Invalid category')
   ],
@@ -75,14 +114,35 @@ router.post('/',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const event = new Event({
+      const eventData = {
         ...req.body,
-        organizer: req.user._id
-      });
-
+        organizer: req.user.id
+      };
+      
+      // Handle coordinates if provided
+      if (req.body.coordinates) {
+        eventData.coordinates = {
+          lat: parseFloat(req.body.coordinates.lat),
+          lng: parseFloat(req.body.coordinates.lng)
+        };
+      }
+      
+      const event = new Event(eventData);
       await event.save();
+      
+      // If it's a paid event with price > 0, create Stripe product
+      if (event.isPaid && event.price > 0) {
+        try {
+          await createEventProduct(event);
+        } catch (error) {
+          console.error('Error creating Stripe product:', error);
+          // Continue even if Stripe product creation fails
+        }
+      }
+
       res.status(201).json(event);
     } catch (error) {
+      console.error('Error creating event:', error);
       res.status(500).json({ error: 'Server error' });
     }
   }
@@ -94,7 +154,11 @@ router.patch('/:id',
   async (req, res) => {
     try {
       const updates = Object.keys(req.body);
-      const allowedUpdates = ['title', 'description', 'date', 'location', 'capacity', 'price', 'status', 'category'];
+      const allowedUpdates = [
+        'title', 'description', 'date', 'location', 'coordinates',
+        'capacity', 'price', 'isPaid', 'status', 'category', 'tags', 'image'
+      ];
+      
       const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
       if (!isValidOperation) {
@@ -103,18 +167,44 @@ router.patch('/:id',
 
       const event = await Event.findOne({
         _id: req.params.id,
-        organizer: req.user._id
+        organizer: req.user.id
       });
 
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
+      
+      // Special handling for coordinates
+      if (req.body.coordinates) {
+        event.coordinates = {
+          lat: parseFloat(req.body.coordinates.lat),
+          lng: parseFloat(req.body.coordinates.lng)
+        };
+        delete req.body.coordinates;
+      }
 
-      updates.forEach(update => event[update] = req.body[update]);
+      updates.forEach(update => {
+        if (update !== 'coordinates') {
+          event[update] = req.body[update];
+        }
+      });
+      
       await event.save();
+      
+      // If it's a paid event with price > 0, update Stripe product
+      if (event.isPaid && event.price > 0 && 
+          (updates.includes('price') || updates.includes('isPaid') || updates.includes('title'))) {
+        try {
+          await createEventProduct(event);
+        } catch (error) {
+          console.error('Error updating Stripe product:', error);
+          // Continue even if Stripe product update fails
+        }
+      }
 
       res.json(event);
     } catch (error) {
+      console.error('Error updating event:', error);
       res.status(500).json({ error: 'Server error' });
     }
   }
@@ -129,19 +219,52 @@ router.post('/:id/register', auth, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    if (event.attendees.some(attendee => attendee.user.equals(req.user._id))) {
+    if (event.attendees.some(attendee => attendee.user.toString() === req.user.id)) {
       return res.status(400).json({ error: 'Already registered for this event' });
     }
 
     if (event.attendees.length >= event.capacity) {
-      return res.status(400).json({ error: 'Event is full' });
+      return res.status(400).json({ 
+        error: 'Event is full',
+        canJoinWaitlist: true
+      });
+    }
+    
+    // If it's a paid event, don't register yet, just return payment info
+    if (event.isPaid && event.price > 0) {
+      return res.status(200).json({
+        requiresPayment: true,
+        event: {
+          _id: event._id,
+          title: event.title,
+          price: event.price
+        }
+      });
     }
 
-    event.attendees.push({ user: req.user._id });
+    // For free events, register immediately
+    event.attendees.push({ 
+      user: req.user.id,
+      registeredAt: new Date(),
+      paymentStatus: 'not_applicable'
+    });
+    
+    // Update analytics
+    event.analytics.registrationRate = (event.attendees.length / event.capacity) * 100;
+    
     await event.save();
 
-    res.json(event);
+    res.json({
+      success: true,
+      message: 'Registration successful',
+      event: {
+        _id: event._id,
+        title: event.title,
+        date: event.date
+      }
+    });
   } catch (error) {
+    console.error('Error registering for event:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -156,18 +279,113 @@ router.post('/:id/cancel', auth, async (req, res) => {
     }
 
     const attendeeIndex = event.attendees.findIndex(
-      attendee => attendee.user.equals(req.user._id)
+      attendee => attendee.user.toString() === req.user.id
     );
 
     if (attendeeIndex === -1) {
       return res.status(400).json({ error: 'Not registered for this event' });
     }
-
+    
+    // Check if there's a waitlist and notify next person
+    const hasWaitlist = event.waitlist && event.waitlist.length > 0;
+    
+    // Remove from attendees
     event.attendees.splice(attendeeIndex, 1);
+    
+    // Update analytics
+    event.analytics.registrationRate = (event.attendees.length / event.capacity) * 100;
+    
     await event.save();
+    
+    // If there's a waitlist, notify the next person
+    if (hasWaitlist) {
+      try {
+        await sendWaitlistNotifications(event._id, 1);
+      } catch (error) {
+        console.error('Error sending waitlist notification:', error);
+        // Continue even if notification fails
+      }
+    }
 
-    res.json(event);
+    res.json({
+      success: true,
+      message: 'Registration cancelled successfully'
+    });
   } catch (error) {
+    console.error('Error cancelling registration:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Check in attendee (organizer only)
+router.post('/:id/check-in/:userId', [auth, authorize('organizer', 'admin')], async (req, res) => {
+  try {
+    const { id: eventId, userId } = req.params;
+    
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    // Check if user is the organizer or admin
+    if (req.user.role !== 'admin' && event.organizer.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to check in attendees for this event' });
+    }
+    
+    // Find attendee
+    const attendeeIndex = event.attendees.findIndex(
+      attendee => attendee.user.toString() === userId
+    );
+    
+    if (attendeeIndex === -1) {
+      return res.status(400).json({ error: 'User not registered for this event' });
+    }
+    
+    // Update check-in status
+    event.attendees[attendeeIndex].checkedIn = true;
+    event.attendees[attendeeIndex].checkedInAt = new Date();
+    
+    // Update analytics
+    event.analytics.checkInRate = (event.attendees.filter(a => a.checkedIn).length / event.attendees.length) * 100;
+    
+    await event.save();
+    
+    res.json({
+      success: true,
+      message: 'Attendee checked in successfully',
+      attendee: {
+        user: event.attendees[attendeeIndex].user,
+        checkedIn: true,
+        checkedInAt: event.attendees[attendeeIndex].checkedInAt
+      }
+    });
+  } catch (error) {
+    console.error('Error checking in attendee:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete event (organizer only)
+router.delete('/:id', [auth, authorize('organizer', 'admin')], async (req, res) => {
+  try {
+    const event = await Event.findOne({
+      _id: req.params.id,
+      organizer: req.user.id
+    });
+    
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    await event.remove();
+    
+    res.json({
+      success: true,
+      message: 'Event deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting event:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

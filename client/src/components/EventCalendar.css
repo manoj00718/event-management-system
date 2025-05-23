@@ -1,0 +1,106 @@
+.event-calendar {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.fc-event-content {
+  padding: 2px;
+}
+
+.fc-event-title {
+  font-weight: bold;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fc-event-location {
+  font-size: 0.8em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-event-attendees {
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+
+.paid-badge {
+  background-color: #ffc107;
+  color: #212529;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body.dark-mode .event-calendar {
+    background-color: #222;
+    color: #f8f9fa;
+  }
+  
+  body.dark-mode .fc-theme-standard .fc-list-day-cushion {
+    background-color: #333;
+  }
+  
+  body.dark-mode .fc-theme-standard .fc-list-event:hover td {
+    background-color: #444;
+  }
+  
+  body.dark-mode .fc-theme-standard td, 
+  body.dark-mode .fc-theme-standard th {
+    border-color: #444;
+  }
+  
+  body.dark-mode .fc-theme-standard .fc-popover {
+    background-color: #333;
+    border-color: #444;
+  }
+  
+  body.dark-mode .fc-theme-standard .fc-popover-header {
+    background-color: #444;
+  }
+}
+
+/* Loading and error states */
+.loading, .error {
+  padding: 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.error {
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .event-calendar {
+    padding: 10px;
+  }
+  
+  .fc-header-toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+  }
+} 

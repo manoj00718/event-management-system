@@ -23,6 +23,16 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  coordinates: {
+    lat: {
+      type: Number,
+      default: null
+    },
+    lng: {
+      type: Number,
+      default: null
+    }
+  },
   capacity: {
     type: Number,
     required: true,
@@ -32,6 +42,18 @@ const eventSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  isPaid: {
+    type: Boolean,
+    default: false
+  },
+  stripeProductId: {
+    type: String,
+    default: null
+  },
+  stripePriceId: {
+    type: String,
+    default: null
   },
   organizer: {
     type: mongoose.Schema.Types.ObjectId,
@@ -44,6 +66,33 @@ const eventSchema = new mongoose.Schema({
       ref: 'User'
     },
     registeredAt: {
+      type: Date,
+      default: Date.now
+    },
+    checkedIn: {
+      type: Boolean,
+      default: false
+    },
+    checkedInAt: {
+      type: Date,
+      default: null
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'refunded', 'not_applicable'],
+      default: 'not_applicable'
+    },
+    paymentId: {
+      type: String,
+      default: null
+    }
+  }],
+  waitlist: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    joinedAt: {
       type: Date,
       default: Date.now
     }
@@ -86,18 +135,40 @@ const eventSchema = new mongoose.Schema({
       type: String
     }
   },
+  analytics: {
+    views: {
+      type: Number,
+      default: 0
+    },
+    registrationRate: {
+      type: Number,
+      default: 0
+    },
+    checkInRate: {
+      type: Number,
+      default: 0
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Virtual field for available spots
 eventSchema.virtual('availableSpots').get(function() {
   return this.capacity - this.attendees.length;
 });
 
-// Generate slug before saving
+eventSchema.virtual('waitlistSize').get(function() {
+  return this.waitlist.length;
+});
+
+eventSchema.virtual('checkInRate').get(function() {
+  if (this.attendees.length === 0) return 0;
+  const checkedInCount = this.attendees.filter(a => a.checkedIn).length;
+  return (checkedInCount / this.attendees.length) * 100;
+});
+
 eventSchema.pre('save', async function(next) {
   if (this.isModified('title')) {
     this.slug = this.title

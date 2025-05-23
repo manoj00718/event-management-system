@@ -43,6 +43,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  coordinates: {
+    lat: {
+      type: Number,
+      default: null
+    },
+    lng: {
+      type: Number,
+      default: null
+    }
+  },
   favoriteEvents: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event'
@@ -52,6 +62,10 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['conference', 'workshop', 'seminar', 'networking', 'other']
     }],
+    tags: [{
+      type: String,
+      trim: true
+    }],
     notifications: {
       email: {
         type: Boolean,
@@ -60,12 +74,24 @@ const userSchema = new mongoose.Schema({
       browser: {
         type: Boolean,
         default: true
+      },
+      eventReminders: {
+        type: Boolean,
+        default: true
+      },
+      reminderTime: {
+        type: Number,
+        default: 24
       }
     },
     displayMode: {
       type: String,
       enum: ['light', 'dark', 'system'],
       default: 'system'
+    },
+    searchRadius: {
+      type: Number,
+      default: 50
     }
   },
   socialLinks: {
@@ -87,6 +113,49 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+  paymentInfo: {
+    stripeCustomerId: {
+      type: String,
+      default: null
+    },
+    paymentHistory: [{
+      eventId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+      },
+      amount: Number,
+      currency: {
+        type: String,
+        default: 'USD'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'completed', 'failed', 'refunded'],
+        default: 'pending'
+      },
+      paymentId: String,
+      paymentDate: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  },
+  qrCodes: [{
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event'
+    },
+    code: String,
+    issuedAt: {
+      type: Date,
+      default: Date.now
+    },
+    isUsed: {
+      type: Boolean,
+      default: false
+    },
+    usedAt: Date
+  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -113,6 +182,11 @@ userSchema.methods.comparePassword = async function(password) {
 userSchema.methods.updateLastLogin = async function() {
   this.lastLogin = new Date();
   await this.save();
+};
+
+// Generate QR code for event registration
+userSchema.methods.generateEventQR = async function(eventId) {
+  // Implementation will be added in the QR code service
 };
 
 const User = mongoose.model('User', userSchema);

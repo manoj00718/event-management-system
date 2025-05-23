@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-  recipient: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -10,74 +10,51 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     enum: [
       'event_reminder',
+      'registration_confirmation',
       'event_update',
       'event_cancelled',
-      'new_comment',
-      'comment_reply',
-      'registration_confirmed',
-      'event_starting_soon',
-      'new_rating'
+      'payment_success',
+      'payment_failed',
+      'waitlist_spot_available',
+      'check_in_confirmation',
+      'system'
     ],
     required: true
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   message: {
     type: String,
     required: true
   },
-  event: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Event'
+  data: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
-  link: {
-    type: String
-  },
-  read: {
+  isRead: {
     type: Boolean,
     default: false
   },
   readAt: {
-    type: Date
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium'
-  },
-  deliveryMethod: {
-    email: {
-      type: Boolean,
-      default: true
-    },
-    inApp: {
-      type: Boolean,
-      default: true
-    },
-    push: {
-      type: Boolean,
-      default: false
-    }
-  },
-  metadata: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed
+    type: Date,
+    default: null
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    expires: 30 * 24 * 60 * 60 // Automatically delete after 30 days
+    default: Date.now
   }
 });
 
 // Index for faster queries
-notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index({ user: 1, isRead: 1 });
 
 // Mark notification as read
 notificationSchema.methods.markAsRead = async function() {
-  this.read = true;
+  this.isRead = true;
   this.readAt = new Date();
   await this.save();
 };
@@ -85,14 +62,11 @@ notificationSchema.methods.markAsRead = async function() {
 // Static method to create event reminder
 notificationSchema.statics.createEventReminder = async function(user, event, timeUntilEvent) {
   return this.create({
-    recipient: user._id,
+    user: user._id,
     type: 'event_reminder',
     title: 'Event Reminder',
     message: `Your event "${event.title}" is starting in ${timeUntilEvent}`,
-    event: event._id,
-    link: `/events/${event._id}`,
-    priority: 'high',
-    metadata: {
+    data: {
       eventDate: event.date,
       eventLocation: event.location
     }
@@ -102,17 +76,16 @@ notificationSchema.statics.createEventReminder = async function(user, event, tim
 // Static method to get unread notifications count
 notificationSchema.statics.getUnreadCount = async function(userId) {
   return this.countDocuments({
-    recipient: userId,
-    read: false
+    user: userId,
+    isRead: false
   });
 };
 
 // Static method to get recent notifications
 notificationSchema.statics.getRecent = async function(userId, limit = 10) {
-  return this.find({ recipient: userId })
+  return this.find({ user: userId })
     .sort({ createdAt: -1 })
     .limit(limit)
-    .populate('event', 'title date')
     .lean();
 };
 
